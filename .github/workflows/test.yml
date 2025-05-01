@@ -8,12 +8,13 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   remove-cache:
     runs-on: ubuntu-latest
-    permissions: write-all
+    permissions: 
+      actions: write
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
