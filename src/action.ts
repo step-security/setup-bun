@@ -15,21 +15,19 @@ import { getExecOutput } from "@actions/exec";
 import { writeBunfig } from "./bunfig";
 import { saveState } from "@actions/core";
 import { addExtension, retry } from "./utils";
-import axios, { isAxiosError } from 'axios'
+import axios, { isAxiosError } from "axios";
 
 async function validateSubscription(): Promise<void> {
-  const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`
+  const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`;
 
   try {
-    await axios.get(API_URL, { timeout: 3000 })
+    await axios.get(API_URL, { timeout: 3000 });
   } catch (error) {
     if (isAxiosError(error) && error.response?.status === 403) {
-      err(
-        'Subscription is not valid. Reach out to support@stepsecurity.io'
-      )
-      process.exit(1)
+      err("Subscription is not valid. Reach out to support@stepsecurity.io");
+      process.exit(1);
     } else {
-      info('Timeout or API not reachable. Continuing to next step.')
+      info("Timeout or API not reachable. Continuing to next step.");
     }
   }
 }
@@ -62,7 +60,7 @@ export type CacheState = {
 };
 
 export default async (options: Input): Promise<Output> => {
-  await validateSubscription()
+  await validateSubscription();
   const bunfigPath = join(process.cwd(), "bunfig.toml");
   writeBunfig(bunfigPath, options);
 
