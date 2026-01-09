@@ -7,14 +7,17 @@ import {
   symlinkSync,
   renameSync,
   copyFileSync,
+  existsSync,
 } from "node:fs";
 import { addPath, info, warning, error as err } from "@actions/core";
 import { isFeatureAvailable, restoreCache } from "@actions/cache";
 import { downloadTool, extractZip } from "@actions/tool-cache";
 import { getExecOutput } from "@actions/exec";
+import { Registry } from "./registry";
 import { writeBunfig } from "./bunfig";
 import { saveState } from "@actions/core";
 import { addExtension, retry } from "./utils";
+import { cwd } from "node:process";
 import axios, { isAxiosError } from "axios";
 
 async function validateSubscription(): Promise<void> {
@@ -39,8 +42,7 @@ export type Input = {
   arch?: string;
   avx2?: boolean;
   profile?: boolean;
-  scope?: string;
-  registryUrl?: string;
+  registries?: Registry[];
   noCache?: boolean;
 };
 
@@ -61,8 +63,8 @@ export type CacheState = {
 
 export default async (options: Input): Promise<Output> => {
   await validateSubscription();
-  const bunfigPath = join(process.cwd(), "bunfig.toml");
-  writeBunfig(bunfigPath, options);
+  const bunfigPath = join(cwd(), "bunfig.toml");
+  writeBunfig(bunfigPath, options.registries);
 
   const url = getDownloadUrl(options);
   const cacheEnabled = isCacheEnabled(options);
@@ -90,26 +92,40 @@ export default async (options: Input): Promise<Output> => {
 
   let revision: string | undefined;
   let cacheHit = false;
-  if (cacheEnabled) {
-    const cacheKey = createHash("sha1").update(url).digest("base64");
 
-    const cacheRestored = await restoreCache([bunPath], cacheKey);
-    if (cacheRestored) {
-      revision = await getRevision(bunPath);
-      if (revision) {
-        cacheHit = true;
-        info(`Using a cached version of Bun: ${revision}`);
-      } else {
-        warning(
-          `Found a cached version of Bun: ${revision} (but it appears to be corrupted?)`,
-        );
-      }
+  // Check if Bun executable already exists and matches requested version
+  if (!options.customUrl && existsSync(bunPath)) {
+    const existingRevision = await getRevision(bunPath);
+    if (existingRevision && isVersionMatch(existingRevision, options.version)) {
+      revision = existingRevision;
+      cacheHit = true; // Treat as cache hit to avoid unnecessary network requests
+      info(`Using existing Bun installation: ${revision}`);
     }
   }
 
-  if (!cacheHit) {
-    info(`Downloading a new version of Bun: ${url}`);
-    revision = await retry(async () => await downloadBun(url, bunPath), 3);
+  if (!revision) {
+    if (cacheEnabled) {
+      const cacheKey = createHash("sha1").update(url).digest("base64");
+
+      const cacheRestored = await restoreCache([bunPath], cacheKey);
+      if (cacheRestored) {
+        revision = await getRevision(bunPath);
+        if (revision) {
+          cacheHit = true;
+          info(`Using a cached version of Bun: ${revision}`);
+        } else {
+          warning(
+            `Found a cached version of Bun: ${revision} (but it appears to be corrupted?)`,
+          );
+        }
+      }
+    }
+
+    if (!cacheHit) {
+      info(`Downloading a new version of Bun: ${url}`);
+      // TODO: remove this, temporary fix for https://github.com/oven-sh/setup-bun/issues/73
+      revision = await retry(async () => await downloadBun(url, bunPath), 3);
+    }
   }
 
   if (!revision) {
@@ -138,11 +154,34 @@ export default async (options: Input): Promise<Output> => {
   };
 };
 
+function isVersionMatch(
+  existingRevision: string,
+  requestedVersion?: string,
+): boolean {
+  // If no version specified, default is "latest" - don't match existing
+  if (!requestedVersion) {
+    return false;
+  }
+
+  // Non-pinned versions should never match existing installations
+  if (/^(latest|canary|action)$/i.test(requestedVersion)) {
+    return false;
+  }
+
+  const [existingVersion] = existingRevision.split("+");
+
+  const normalizeVersion = (v: string) => v.replace(/^v/i, "");
+
+  return (
+    normalizeVersion(existingVersion) === normalizeVersion(requestedVersion)
+  );
+}
+
 async function downloadBun(
   url: string,
   bunPath: string,
 ): Promise<string | undefined> {
-  // Workaround for https://github.com/actions/toolkit/issues/1179
+  // Workaround for https://github.com/oven-sh/setup-bun/issues/79 and https://github.com/actions/toolkit/issues/1179
   const zipPath = addExtension(await downloadTool(url), ".zip");
   const extractedZipPath = await extractZip(zipPath);
   const extractedBunPath = await extractBun(extractedZipPath);
