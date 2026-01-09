@@ -6,14 +6,14 @@ import { resolve, basename } from "node:path";
 export function retry<T>(
   fn: () => Promise<T>,
   retries: number,
-  timeout = 10000
+  timeout = 10000,
 ): Promise<T> {
   return fn().catch((err) => {
     if (retries <= 0) {
       throw err;
     }
     return new Promise((resolve) => setTimeout(resolve, timeout)).then(() =>
-      retry(fn, retries - 1, timeout)
+      retry(fn, retries - 1, timeout),
     );
   });
 }
@@ -28,8 +28,10 @@ export function addExtension(path: string, ext: string): string {
 }
 
 const FILE_VERSION_READERS = {
-  "package.json": (content: string) =>
-    JSON.parse(content).packageManager?.split("bun@")?.[1],
+  "package.json": (content: string) => {
+    const pkg = JSON.parse(content);
+    return pkg.packageManager?.split("bun@")?.[1] ?? pkg.engines?.bun;
+  },
   ".tool-versions": (content: string) =>
     content.match(/^bun\s*(?<version>.*?)$/m)?.groups?.version,
   ".bumrc": (content: string) => content, // https://github.com/owenizedd/bum
