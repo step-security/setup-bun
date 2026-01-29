@@ -9,7 +9,7 @@ import {
   copyFileSync,
   existsSync,
 } from "node:fs";
-import { addPath, info, warning, error } from "@actions/core";
+import { addPath, info, warning, error as err } from "@actions/core";
 import { isFeatureAvailable, restoreCache } from "@actions/cache";
 import { downloadTool, extractZip } from "@actions/tool-cache";
 import { getExecOutput } from "@actions/exec";
@@ -26,9 +26,9 @@ async function validateSubscription(): Promise<void> {
 
   try {
     await axios.get(API_URL, { timeout: 3000 });
-  } catch (err) {
-    if (isAxiosError(err) && err.response?.status === 403) {
-      error("Subscription is not valid. Reach out to support@stepsecurity.io");
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 403) {
+      err("Subscription is not valid. Reach out to support@stepsecurity.io");
       process.exit(1);
     } else {
       info("Timeout or API not reachable. Continuing to next step.");
