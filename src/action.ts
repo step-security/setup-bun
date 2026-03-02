@@ -16,7 +16,8 @@ import { getExecOutput } from "@actions/exec";
 import { Registry } from "./registry";
 import { writeBunfig } from "./bunfig";
 import { saveState } from "@actions/core";
-import { addExtension, retry } from "./utils";
+import { addExtension } from "./utils";
+import { getDownloadUrl } from "./download-url";
 import { cwd } from "node:process";
 import axios, { isAxiosError } from "axios";
 
@@ -44,6 +45,7 @@ export type Input = {
   profile?: boolean;
   registries?: Registry[];
   noCache?: boolean;
+  token?: string;
 };
 
 export type Output = {
@@ -66,7 +68,7 @@ export default async (options: Input): Promise<Output> => {
   const bunfigPath = join(cwd(), "bunfig.toml");
   writeBunfig(bunfigPath, options.registries);
 
-  const url = getDownloadUrl(options);
+  const url = await getDownloadUrl(options);
   const cacheEnabled = isCacheEnabled(options);
 
   const binPath = join(homedir(), ".bun", "bin");
@@ -123,8 +125,7 @@ export default async (options: Input): Promise<Output> => {
 
     if (!cacheHit) {
       info(`Downloading a new version of Bun: ${url}`);
-      // TODO: remove this, temporary fix for https://github.com/oven-sh/setup-bun/issues/73
-      revision = await retry(async () => await downloadBun(url, bunPath), 3);
+      revision = await downloadBun(url, bunPath);
     }
   }
 
@@ -208,24 +209,6 @@ function isCacheEnabled(options: Input): boolean {
     return false;
   }
   return isFeatureAvailable();
-}
-
-function getDownloadUrl(options: Input): string {
-  const { customUrl } = options;
-  if (customUrl) {
-    return customUrl;
-  }
-  const { version, os, arch, avx2, profile } = options;
-  const eversion = encodeURIComponent(version ?? "latest");
-  const eos = encodeURIComponent(os ?? process.platform);
-  const earch = encodeURIComponent(arch ?? process.arch);
-  const eavx2 = encodeURIComponent(avx2 ?? true);
-  const eprofile = encodeURIComponent(profile ?? false);
-  const { href } = new URL(
-    `${eversion}/${eos}/${earch}?avx2=${eavx2}&profile=${eprofile}`,
-    "https://bun.sh/download/",
-  );
-  return href;
 }
 
 async function extractBun(path: string): Promise<string> {

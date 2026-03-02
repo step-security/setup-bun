@@ -1,0 +1,74 @@
+diff --git a/node_modules/compare-versions/lib/esm/satisfies.js b/node_modules/compare-versions/lib/esm/satisfies.js
+index 7586b71..8b38a9b 100644
+--- a/node_modules/compare-versions/lib/esm/satisfies.js
++++ b/node_modules/compare-versions/lib/esm/satisfies.js
+@@ -40,7 +40,7 @@ export const satisfies = (version, range) => {
+     // else range of either "~" or "^" is assumed
+     const [v1, v2, v3, , vp] = validateAndParse(version);
+     const [r1, r2, r3, , rp] = validateAndParse(range);
+-    const v = [v1, v2, v3];
++    const v = [v1, v2 !== null && v2 !== void 0 ? v2 : 'x', v3 !== null && v3 !== void 0 ? v3 : 'x'];
+     const r = [r1, r2 !== null && r2 !== void 0 ? r2 : 'x', r3 !== null && r3 !== void 0 ? r3 : 'x'];
+     // validate pre-release
+     if (rp) {
+diff --git a/node_modules/compare-versions/lib/esm/utils.js b/node_modules/compare-versions/lib/esm/utils.js
+index b5cc8b9..ec56105 100644
+--- a/node_modules/compare-versions/lib/esm/utils.js
++++ b/node_modules/compare-versions/lib/esm/utils.js
+@@ -28,7 +28,7 @@ const compareStrings = (a, b) => {
+ };
+ export const compareSegments = (a, b) => {
+     for (let i = 0; i < Math.max(a.length, b.length); i++) {
+-        const r = compareStrings(a[i] || '0', b[i] || '0');
++        const r = compareStrings(a[i] || 'x', b[i] || 'x');
+         if (r !== 0)
+             return r;
+     }
+diff --git a/node_modules/compare-versions/lib/umd/index.js b/node_modules/compare-versions/lib/umd/index.js
+index 2cfef26..e690787 100644
+--- a/node_modules/compare-versions/lib/umd/index.js
++++ b/node_modules/compare-versions/lib/umd/index.js
+@@ -34,7 +34,7 @@
+     };
+     const compareSegments = (a, b) => {
+         for (let i = 0; i < Math.max(a.length, b.length); i++) {
+-            const r = compareStrings(a[i] || '0', b[i] || '0');
++            const r = compareStrings(a[i] || 'x', b[i] || 'x');
+             if (r !== 0)
+                 return r;
+         }
+@@ -152,7 +152,7 @@
+         // else range of either "~" or "^" is assumed
+         const [v1, v2, v3, , vp] = validateAndParse(version);
+         const [r1, r2, r3, , rp] = validateAndParse(range);
+-        const v = [v1, v2, v3];
++        const v = [v1, v2 !== null && v2 !== void 0 ? v2 : 'x', v3 !== null && v3 !== void 0 ? v3 : 'x'];
+         const r = [r1, r2 !== null && r2 !== void 0 ? r2 : 'x', r3 !== null && r3 !== void 0 ? r3 : 'x'];
+         // validate pre-release
+         if (rp) {
+diff --git a/node_modules/compare-versions/src/satisfies.ts b/node_modules/compare-versions/src/satisfies.ts
+index 66cb171..6b4973f 100644
+--- a/node_modules/compare-versions/src/satisfies.ts
++++ b/node_modules/compare-versions/src/satisfies.ts
+@@ -43,7 +43,7 @@ export const satisfies = (version: string, range: string): boolean => {
+   // else range of either "~" or "^" is assumed
+   const [v1, v2, v3, , vp] = validateAndParse(version);
+   const [r1, r2, r3, , rp] = validateAndParse(range);
+-  const v = [v1, v2, v3];
++  const v = [v1, v2 ?? 'x', v3 ?? 'x'];
+   const r = [r1, r2 ?? 'x', r3 ?? 'x'];
+ 
+   // validate pre-release
+diff --git a/node_modules/compare-versions/src/utils.ts b/node_modules/compare-versions/src/utils.ts
+index c7ae849..8e2e69c 100644
+--- a/node_modules/compare-versions/src/utils.ts
++++ b/node_modules/compare-versions/src/utils.ts
+@@ -43,7 +43,7 @@ export const compareSegments = (
+   b: string | string[] | RegExpMatchArray
+ ) => {
+   for (let i = 0; i < Math.max(a.length, b.length); i++) {
+-    const r = compareStrings(a[i] || '0', b[i] || '0');
++    const r = compareStrings(a[i] || 'x', b[i] || 'x');
+     if (r !== 0) return r;
+   }
+   return 0;
