@@ -212,6 +212,11 @@ jobs:
             run: |
               echo "$(jq '.engines = {"bun": "1.1.0"}' package.json)" > package.json
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+        with:
+          egress-policy: audit
+
       - name: 📥 Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
 
