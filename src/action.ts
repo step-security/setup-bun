@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import {
@@ -17,7 +16,7 @@ import { getExecOutput } from "@actions/exec";
 import { Registry } from "./registry";
 import { writeBunfig } from "./bunfig";
 import { saveState } from "@actions/core";
-import { addExtension } from "./utils";
+import { addExtension, getCacheKey } from "./utils";
 import { getDownloadUrl } from "./download-url";
 import { cwd } from "node:process";
 import axios, { isAxiosError } from "axios";
@@ -131,7 +130,7 @@ export default async (options: Input): Promise<Output> => {
 
   if (!revision) {
     if (cacheEnabled) {
-      const cacheKey = createHash("sha1").update(url).digest("base64");
+      const cacheKey = getCacheKey(url);
 
       const cacheRestored = await restoreCache([bunPath], cacheKey);
       if (cacheRestored) {
