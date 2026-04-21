@@ -1,6 +1,51 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
-import { getArchitecture, getAvx2 } from "../src/utils";
+import { extractVersionFromUrl, getArchitecture, getAvx2, hasNativeWindowsArm64 } from "../src/utils";
 import * as core from "@actions/core";
+
+describe("extractVersionFromUrl", () => {
+  it("should extract version from standard download URL", () => {
+    expect(extractVersionFromUrl("https://github.com/oven-sh/bun/releases/download/bun-v1.3.1/bun-linux-x64.zip")).toBe("1.3.1");
+    expect(extractVersionFromUrl("https://github.com/oven-sh/bun/releases/download/bun-v1.0.0/bun-darwin-aarch64.zip")).toBe("1.0.0");
+    expect(extractVersionFromUrl("https://github.com/oven-sh/bun/releases/download/bun-v0.5.0/bun-linux-x64-baseline.zip")).toBe("0.5.0");
+  });
+
+  it("should extract version from URL with profile suffix", () => {
+    expect(extractVersionFromUrl("https://github.com/oven-sh/bun/releases/download/bun-v1.1.0/bun-linux-x64-profile.zip")).toBe("1.1.0");
+  });
+
+  it("should return undefined for canary URL", () => {
+    expect(extractVersionFromUrl("https://github.com/oven-sh/bun/releases/download/canary/bun-linux-x64.zip")).toBeUndefined();
+  });
+
+  it("should return undefined for custom/non-standard URL", () => {
+    expect(extractVersionFromUrl("https://example.com/bun.zip")).toBeUndefined();
+  });
+});
+
+describe("hasNativeWindowsArm64", () => {
+  it("should return true for version >= 1.3.10", () => {
+    expect(hasNativeWindowsArm64("bun-v1.3.10")).toBe(true);
+    expect(hasNativeWindowsArm64("bun-v1.3.11")).toBe(true);
+    expect(hasNativeWindowsArm64("bun-v1.4.0")).toBe(true);
+    expect(hasNativeWindowsArm64("bun-v2.0.0")).toBe(true);
+  });
+
+  it("should return false for version < 1.3.10", () => {
+    expect(hasNativeWindowsArm64("bun-v1.3.9")).toBe(false);
+    expect(hasNativeWindowsArm64("bun-v1.2.0")).toBe(false);
+    expect(hasNativeWindowsArm64("bun-v1.0.0")).toBe(false);
+    expect(hasNativeWindowsArm64("bun-v0.5.0")).toBe(false);
+  });
+
+  it("should return true for non-semver versions like canary", () => {
+    expect(hasNativeWindowsArm64("canary")).toBe(true);
+    expect(hasNativeWindowsArm64("latest")).toBe(true);
+  });
+
+  it("should return false for undefined version", () => {
+    expect(hasNativeWindowsArm64(undefined)).toBe(false);
+  });
+});
 
 describe("getArchitecture", () => {
   let warningSpy: ReturnType<typeof spyOn>;
@@ -9,30 +54,54 @@ describe("getArchitecture", () => {
     warningSpy?.mockRestore();
   });
 
-  it("should return x64 for Windows with arm64 architecture", () => {
+  it("should return aarch64 for Windows arm64 with Bun >= 1.3.10", () => {
+    warningSpy = spyOn(core, "warning");
+    const result = getArchitecture("windows", "arm64", "bun-v1.3.10");
+
+    expect(result).toBe("aarch64");
+    expect(warningSpy).not.toHaveBeenCalled();
+  });
+
+  it("should return aarch64 for Windows aarch64 with Bun >= 1.3.10", () => {
+    warningSpy = spyOn(core, "warning");
+    const result = getArchitecture("windows", "aarch64", "bun-v1.4.0");
+
+    expect(result).toBe("aarch64");
+    expect(warningSpy).not.toHaveBeenCalled();
+  });
+
+  it("should return x64 for Windows arm64 with Bun < 1.3.10", () => {
+    warningSpy = spyOn(core, "warning");
+    const result = getArchitecture("windows", "arm64", "bun-v1.2.0");
+
+    expect(result).toBe("x64");
+    expect(warningSpy).toHaveBeenCalledTimes(1);
+    expect(warningSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "⚠️ This version of Bun does not provide native arm64 builds for Windows."
+      )
+    );
+  });
+
+  it("should return x64 for Windows aarch64 with Bun < 1.3.10", () => {
+    warningSpy = spyOn(core, "warning");
+    const result = getArchitecture("windows", "aarch64", "bun-v1.0.0");
+
+    expect(result).toBe("x64");
+    expect(warningSpy).toHaveBeenCalledTimes(1);
+    expect(warningSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "⚠️ This version of Bun does not provide native arm64 builds for Windows."
+      )
+    );
+  });
+
+  it("should return x64 for Windows arm64 with no version (fallback)", () => {
     warningSpy = spyOn(core, "warning");
     const result = getArchitecture("windows", "arm64");
 
     expect(result).toBe("x64");
     expect(warningSpy).toHaveBeenCalledTimes(1);
-    expect(warningSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "⚠️ Bun does not provide native arm64 builds for Windows."
-      )
-    );
-  });
-
-  it("should return x64 for Windows with aarch64 architecture", () => {
-    warningSpy = spyOn(core, "warning");
-    const result = getArchitecture("windows", "aarch64");
-
-    expect(result).toBe("x64");
-    expect(warningSpy).toHaveBeenCalledTimes(1);
-    expect(warningSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "⚠️ Bun does not provide native arm64 builds for Windows."
-      )
-    );
   });
 
   it("should return aarch64 for non-Windows platforms with arm64", () => {
@@ -77,24 +146,28 @@ describe("getArchitecture", () => {
 });
 
 describe("getAvx2", () => {
-  it("should return false when called with os: 'windows' and arch: 'arm64'", () => {
-    const result = getAvx2("windows", "arm64");
-    expect(result).toBe(false);
+  it("should return false for Windows arm64 with Bun < 1.3.10", () => {
+    expect(getAvx2("windows", "arm64", undefined, "bun-v1.2.0")).toBe(false);
   });
 
-  it("should return false when called with os: 'windows' and arch: 'aarch64'", () => {
-    const result = getAvx2("windows", "aarch64");
-    expect(result).toBe(false);
+  it("should return false for Windows aarch64 with Bun < 1.3.10", () => {
+    expect(getAvx2("windows", "aarch64", undefined, "bun-v1.0.0")).toBe(false);
   });
 
-  it("should return false when called with os: 'windows', arch: 'arm64', and avx2: true", () => {
-    const result = getAvx2("windows", "arm64", true);
-    expect(result).toBe(false);
+  it("should return false for Windows arm64 with no version (fallback)", () => {
+    expect(getAvx2("windows", "arm64")).toBe(false);
   });
 
-  it("should return false when called with os: 'windows', arch: 'aarch64', and avx2: false", () => {
-    const result = getAvx2("windows", "aarch64", false);
-    expect(result).toBe(false);
+  it("should return false for Windows aarch64 with no version (fallback)", () => {
+    expect(getAvx2("windows", "aarch64")).toBe(false);
+  });
+
+  it("should return true for Windows arm64 with Bun >= 1.3.10", () => {
+    expect(getAvx2("windows", "arm64", undefined, "bun-v1.3.10")).toBe(true);
+  });
+
+  it("should return true for Windows aarch64 with Bun >= 1.3.10", () => {
+    expect(getAvx2("windows", "aarch64", undefined, "bun-v1.4.0")).toBe(true);
   });
 
   it("should return the provided avx2 value (true) when specified and not on Windows ARM64", () => {
