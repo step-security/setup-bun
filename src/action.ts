@@ -10,7 +10,6 @@ import {
 } from "node:fs";
 import { addPath, info, warning, error as err } from "@actions/core";
 import { isFeatureAvailable, restoreCache } from "@actions/cache";
-import * as github from "@actions/github";
 import { downloadTool, extractZip } from "@actions/tool-cache";
 import { getExecOutput } from "@actions/exec";
 import { Registry } from "./registry";
@@ -20,9 +19,17 @@ import { addExtension, extractVersionFromUrl, getCacheKey } from "./utils";
 import { getDownloadUrl } from "./download-url";
 import { cwd } from "node:process";
 import axios, { isAxiosError } from "axios";
+import * as fs from "fs";
 
 async function validateSubscription() {
-  const repoPrivate = github.context?.payload?.repository?.private;
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  let repoPrivate: boolean | undefined;
+
+  if (eventPath && fs.existsSync(eventPath)) {
+    const eventData = JSON.parse(fs.readFileSync(eventPath, "utf8"));
+    repoPrivate = eventData?.repository?.private;
+  }
+
   const upstream = "oven-sh/setup-bun";
   const action = process.env.GITHUB_ACTION_REPOSITORY;
   const docsUrl =
