@@ -5,6 +5,7 @@
     "module": "ES2020",
     "target": "ES2024",
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "types": ["node"]
   }
