@@ -1,6 +1,6 @@
 name: Setup Bun
 description: Download, install, and setup Bun to your path.
-author: step-security
+author: robobun
 
 branding:
   icon: play-circle
