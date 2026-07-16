@@ -10,33 +10,44 @@
     "actions",
     "setup"
   ],
-  "homepage": "https://bun.sh/",
+  "homepage": "https://github.com/step-security/setup-bun#readme",
   "main": "dist/index.js",
-  "repository": "git@github.com:step-security/setup-bun.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/step-security/setup-bun.git"
+  },
+  "bugs": {
+    "url": "https://github.com/step-security/setup-bun/issues"
+  },
   "license": "MIT",
   "author": "step-security",
   "scripts": {
     "format": "prettier --write src *.yml *.json *.md",
-    "build": "patch-package && esbuild --target=node24 --outfile=dist/setup/index.js --bundle --keep-names --minify --platform=node --format=cjs src/index.ts && esbuild --target=node24 --outfile=dist/cache-save/index.js --bundle --keep-names --minify --platform=node --format=cjs src/cache-save.ts",
+    "build": "esbuild --target=node24 --outfile=dist/setup/index.js --bundle --keep-names --minify --platform=node --format=cjs src/index.ts && esbuild --target=node24 --outfile=dist/cache-save/index.js --bundle --keep-names --minify --platform=node --format=cjs src/cache-save.ts",
     "start": "npm run build && node dist/setup/index.js"
   },
   "dependencies": {
-    "@actions/cache": "^6.0.0",
-    "@actions/core": "^3.0.1",
-    "@actions/exec": "^3.0.0",
-    "@actions/glob": "^0.7.0",
-    "@actions/io": "^3.0.2",
-    "@actions/tool-cache": "^4.0.0",
+    "@actions/cache": "^5.0.5",
+    "@actions/core": "^2.0.3",
+    "@actions/exec": "^2.0.0",
+    "@actions/glob": "^0.5.0",
+    "@actions/io": "^2.0.0",
+    "@actions/tool-cache": "^3.0.0",
     "@iarna/toml": "^2.2.5",
-    "axios": "^1.16.1",
-    "compare-versions": "^6.1.1"
+    "compare-versions": "^6.1.1",
+    "axios": "^1.6.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.14",
-    "@types/node": "^24.12.4",
-    "esbuild": "^0.28.0",
-    "patch-package": "^8.0.1",
-    "prettier": "^3.8.3",
-    "typescript": "^6.0.3"
+    "@types/bun": "^1.3.10",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.19.12",
+    "prettier": "^3.8.1",
+    "typescript": "^4.9.5"
+  },
+  "patchedDependencies": {
+    "compare-versions@6.1.1": "patches/compare-versions@6.1.1.patch"
+  },
+  "overrides": {
+    "form-data": "^4.0.4"
   }
 }

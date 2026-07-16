@@ -7,7 +7,7 @@ Download, install, and setup [Bun](https://bun.sh) in GitHub Actions.
 ## Usage
 
 ```yaml
-- uses: oven-sh/setup-bun@v2
+- uses: step-security/setup-bun@v2
 ```
 
 By default, if no version is specified, the action will:

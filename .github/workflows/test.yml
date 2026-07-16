@@ -8,21 +8,15 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   remove-cache:
     runs-on: ubuntu-latest
-    permissions: 
-      actions: write
+    permissions: write-all
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
-        with:
-          egress-policy: audit
-
       - name: 📥 Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: 🗑️ Remove cache
         run: gh cache delete --all || true
@@ -33,13 +27,8 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
-        with:
-          egress-policy: audit
-
       - name: Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Bun
         uses: ./
@@ -83,13 +72,8 @@ jobs:
           # - "822a00c4d508b54f650933a73ca5f4a3af9a7983" # 1.0.0 commit
 
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
-        with:
-          egress-policy: audit
-
       - name: 📥 Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: 🛠️ Setup Bun
         uses: ./
@@ -164,13 +148,8 @@ jobs:
             run: echo "1.1.0" > .bun-version
 
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
-        with:
-          egress-policy: audit
-
       - name: 📥 Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: 📄 Setup file
         run: ${{ matrix.file.run }}
@@ -204,17 +183,20 @@ jobs:
             file: package.json
             run: |
               echo "$(jq '. += {"packageManager": "bun@1.1.0"}' package.json)" > package.json
+
           - name: package.json (packageManager yarn@bun@1.1.0)
             file: package.json
             run: |
               echo "$(jq '. += {"packageManager": "yarn@bun@1.1.0"}' package.json)" > package.json
+
           - name: package.json (engines bun@1.1.0)
             file: package.json
             run: |
               echo "$(jq '.engines = {"bun": "1.1.0"}' package.json)" > package.json
+
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: 📄 Setup file
         run: ${{ matrix.file.run }}
@@ -243,13 +225,8 @@ jobs:
           - windows-latest
 
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
-        with:
-          egress-policy: audit
-
       - name: 📥 Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: 🛠️ Setup Bun
         uses: ./
@@ -273,13 +250,8 @@ jobs:
           - ubuntu-latest
 
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
-        with:
-          egress-policy: audit
-
       - name: 📥 Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: 🛠️ Setup Bun
         uses: ./
@@ -288,18 +260,22 @@ jobs:
           registries: |
             https://registry.npmjs.org
             @types:https://registry.yarnpkg.com
+
       - name: ▶️ Install from default registry
         run: |
           output=$(bun add is-odd --verbose --force 2>&1)
+
           if echo "$output" | grep -q "HTTP/1.1 GET https://registry.npmjs.org/is-odd"; then
             echo "Successfully installed from default registry"
           else
             echo "Failed to install from default registry"
             exit 1
           fi
+
       - name: ▶️ Install from @types registry
         run: |
           output=$(bun add @types/bun --verbose --force 2>&1)
+
           if echo "$output" | grep -q "HTTP/1.1 GET https://registry.yarnpkg.com/@types%2fbun"; then
             echo "Successfully installed from @types registry"
           else
