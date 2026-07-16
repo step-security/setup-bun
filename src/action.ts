@@ -48,7 +48,6 @@ export type CacheState = {
   url: string;
 };
 
-
 async function validateSubscription(): Promise<void> {
   let repoPrivate: boolean | undefined;
   const eventPath = process.env.GITHUB_EVENT_PATH;
@@ -285,5 +284,3 @@ async function getRevision(exe: string): Promise<string | undefined> {
   }
   return undefined;
 }
-
-
