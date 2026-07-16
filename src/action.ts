@@ -9,7 +9,6 @@ import {
   existsSync,
 } from "node:fs";
 import { addPath, info, warning, error as coreError } from "@actions/core";
-import axios, { isAxiosError } from "axios";
 import { readFileSync } from "node:fs";
 import { isFeatureAvailable, restoreCache } from "@actions/cache";
 import { downloadTool, extractZip } from "@actions/tool-cache";
@@ -70,19 +69,26 @@ async function validateSubscription(): Promise<void> {
   const body: Record<string, string> = { action: action || "" };
   if (serverUrl !== "https://github.com") body.ghes_server = serverUrl;
   try {
-    await axios.post(
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(
       `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/maintained-actions-subscription`,
-      body,
-      { timeout: 3000 },
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      },
     );
-  } catch (error) {
-    if (isAxiosError(error) && error.response?.status === 403) {
+    clearTimeout(timer);
+    if (res.status === 403) {
       coreError(
         "This action requires a StepSecurity subscription for private repositories.",
       );
       coreError(`Learn how to enable a subscription: ${docsUrl}`);
       process.exit(1);
     }
+  } catch {
     info("Timeout or API not reachable. Continuing to next step.");
   }
 }
