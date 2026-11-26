@@ -25,3 +25,5 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@67d4f4bd7a9b17a0db54d2a7519187c65e339de8 # v4
+        with:
+          allow-ghsas: GHSA-g3hv-75wg-m249 # minimatch@10.2.6 via @actions/glob@0.7.0 (dev-only); dist ships minimatch@6.0.0, unaffected
